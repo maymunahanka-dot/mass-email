@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own data
+    match /fashiontally_clients/{clientId} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email == resource.data.userEmail;
+      allow create: if request.auth != null && 
+        request.auth.token.email == request.resource.data.userEmail;
+      
+      // Measurements subcollection
+      match /measurements/{measurementId} {
+        allow read, write: if request.auth != null && 
+          request.auth.token.email == resource.data.userEmail;
+        allow create: if request.auth != null && 
+          request.auth.token.email == request.resource.data.userEmail;
+      }
+      
+      // Orders subcollection
+      match /orders/{orderId} {
+        allow read, write: if request.auth != null && 
+          request.auth.token.email == resource.data.userEmail;
+        allow create: if request.auth != null && 
+          request.auth.token.email == request.resource.data.userEmail;
+      }
+    }
+    
+    // Inventory management
+    match /fashiontally_inventory/{inventoryId} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email == resource.data.userEmail;
+      allow create: if request.auth != null && 
+        request.auth.token.email == request.resource.data.userEmail;
+    }
+    
+    // Invoice management
+    match /fashiontally_invoices/{invoiceId} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email == resource.data.userEmail;
+      allow create: if request.auth != null && 
+        request.auth.token.email == request.resource.data.userEmail;
+    }
+    
+    // Transactions management
+    match /fashiontally_transactions/{transactionId} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email == resource.data.userEmail;
+      allow create: if request.auth != null && 
+        request.auth.token.email == request.resource.data.userEmail;
+    }
+    
+    // Brand settings
+    match /fashiontally_brand_settings/{userId} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email == userId;
+    }
+    
+    // User profiles
+    match /fashiontally_users/{userId} {
+      allow read, write: if request.auth != null && 
+        request.auth.token.email == userId;
+    }
+  }
+}

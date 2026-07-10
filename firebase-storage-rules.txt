@@ -1,0 +1,44 @@
+// Firebase Storage Security Rules
+// Copy these rules to your Firebase Console -> Storage -> Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload and read their own profile images
+    match /profile_images/{userId}_{timestamp}.{extension} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read any profile image (for viewing other users' profiles)
+    match /profile_images/{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+    
+    // Allow authenticated users to delete their own profile images
+    match /profile_images/{userId}_{allPaths=**} {
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
+// CORS Configuration for Firebase Storage
+// You also need to configure CORS for your storage bucket.
+// Run this command in your terminal (replace YOUR_BUCKET_NAME with your actual bucket name):
+
+// gsutil cors set cors.json gs://YOUR_BUCKET_NAME
+
+// Create a cors.json file with this content:
+[
+  {
+    "origin": ["http://localhost:5173", "http://localhost:3000", "https://your-domain.com"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "Access-Control-Allow-Methods"]
+  }
+]
+
+// Alternative: If you don't have gsutil, you can set CORS through Firebase Console:
+// 1. Go to Firebase Console -> Storage
+// 2. Click on "Rules" tab
+// 3. Update the rules with the above configuration
+// 4. For CORS, you may need to contact Firebase support or use the gsutil command

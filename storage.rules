@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Profile images
+    match /profile_images/{userId}_{timestamp}.{extension} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Brand logos
+    match /brand_logos/{userId}_{timestamp}.{extension} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // General user uploads
+    match /uploads/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow all authenticated users to read any file (for public assets)
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+  }
+}

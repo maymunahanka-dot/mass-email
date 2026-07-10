@@ -1,0 +1,35 @@
+═══════════════════════════════════════════════════════════════
+  CLOUDINARY SETUP - DO THIS NOW!
+═══════════════════════════════════════════════════════════════
+
+⚠️  The upload will NOT work until you complete these steps!
+
+STEP 1: Go to Cloudinary
+→ https://console.cloudinary.com/
+
+STEP 2: Create Upload Preset
+→ Settings (gear icon) → Upload → Add upload preset
+
+STEP 3: Configure Preset
+   Preset name: fashion_tally_unsigned
+   Signing Mode: Unsigned ⚠️ MUST BE UNSIGNED!
+   Folder: img
+   Access Mode: Public
+   
+STEP 4: Save the preset
+
+STEP 5: Restart your dev server
+   Ctrl+C to stop
+   npm run dev to restart
+
+═══════════════════════════════════════════════════════════════
+
+✅ DONE? Test it:
+   1. Go to signup page
+   2. Upload a logo in Step 3
+   3. Should see "Uploading Logo..." then success!
+
+❌ Still getting errors?
+   Read: CLOUDINARY_SETUP.md for detailed troubleshooting
+
+═══════════════════════════════════════════════════════════════
