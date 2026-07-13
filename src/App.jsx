@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
-const API = import.meta.env.VITE_BACKEND_URL 
+const API = import.meta.env.VITE_BACKEND_URL || 'https://backend.fashiontally.com';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function initials(name, email) {
@@ -31,15 +33,33 @@ export default function App() {
 
   const [search, setSearch]     = useState('');
   const [selected, setSelected] = useState(new Set());
-  const [sendMode, setSendMode] = useState('all'); // 'all' | 'selected'
+  const [sendMode, setSendMode] = useState('all');
 
-  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-
   const [sending, setSending] = useState(false);
   const [result, setResult]   = useState(null);
 
   const searchRef = useRef(null);
+
+  // ── quill toolbar config ─────────────────────────────────────────────────────
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ color: [] }, { background: [] }],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      [{ align: [] }],
+      ['link', 'image'],
+      ['blockquote', 'code-block'],
+      ['clean'],
+    ],
+  };
+
+  const quillFormats = [
+    'header', 'bold', 'italic', 'underline', 'strike',
+    'color', 'background', 'list', 'align',
+    'link', 'image', 'blockquote', 'code-block',
+  ];
 
   // ── load users ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -61,7 +81,7 @@ export default function App() {
     })();
   }, []);
 
-  // ── filtered list ───────────────────────────────────────────────────────────
+  // ── filtered list ────────────────────────────────────────────────────────────
   const q        = search.trim().toLowerCase();
   const filtered = q
     ? users.filter(u =>
@@ -70,7 +90,7 @@ export default function App() {
       )
     : users;
 
-  // ── selection ───────────────────────────────────────────────────────────────
+  // ── selection ────────────────────────────────────────────────────────────────
   const toggleUser = (email) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -90,10 +110,9 @@ export default function App() {
     setSendMode('all');
   };
 
-  // ── send ────────────────────────────────────────────────────────────────────
+  // ── send ──────────────────────────────────────────────────────────────────────
   const handleSend = async () => {
-    if (!subject.trim()) { toast.error('Subject is required'); return; }
-    if (!message.trim()) { toast.error('Message is required'); return; }
+    if (!message.trim() || message === '<p><br></p>') { toast.error('Message is required'); return; }
 
     const recipients = sendMode === 'all' ? 'all' : [...selected];
     if (sendMode === 'selected' && recipients.length === 0) {
@@ -102,7 +121,7 @@ export default function App() {
     }
 
     const count     = sendMode === 'all' ? users.length : recipients.length;
-    const confirmed = window.confirm(`Send "${subject}" to ${count} user${count !== 1 ? 's' : ''}?`);
+    const confirmed = window.confirm(`Send email to ${count} user${count !== 1 ? 's' : ''}?`);
     if (!confirmed) return;
 
     setSending(true);
@@ -112,31 +131,38 @@ export default function App() {
       const res  = await fetch(`${API}/api/email-blast/send`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ subject: subject.trim(), message: message.trim(), recipients }),
+        body:    JSON.stringify({ message: message.trim(), recipients }),
       });
+
+      // Guard against non-JSON responses (e.g. 413 Payload Too Large)
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Server error ${res.status}: ${res.statusText}`);
+      }
+
       const data = await res.json();
 
       if (data.success) {
-        setResult(data);
-        toast.success(`✅ Sent to ${data.sent} of ${data.total} users`);
-        if (data.failed === 0) { setSubject(''); setMessage(''); }
+        setResult({ total: data.total });
+        toast.success(`📨 Queued for ${data.total} users — sending in background`);
+        setMessage('');
       } else {
         toast.error(data.error || 'Send failed');
       }
     } catch (err) {
-      toast.error('Network error — could not reach server');
+      toast.error('Could not reach server — check connection');
       console.error(err);
     } finally {
       setSending(false);
     }
   };
 
-  // ── derived labels ──────────────────────────────────────────────────────────
+  // ── derived labels ───────────────────────────────────────────────────────────
   const recipientLabel = sendMode === 'all'
     ? `All ${users.length} users`
     : `${selected.size} selected`;
 
-  // ── render ──────────────────────────────────────────────────────────────────
+  // ── render ───────────────────────────────────────────────────────────────────
   return (
     <div style={s.page}>
       <Toaster position="top-right" />
@@ -152,12 +178,10 @@ export default function App() {
         </span>
       </header>
 
-      {/* Layout */}
       <div style={s.layout}>
 
         {/* ── LEFT: user list ── */}
         <aside style={s.sidebar}>
-
           <div style={s.sidebarTop}>
             <span style={s.sidebarTitle}>Recipients</span>
             <div style={s.sidebarActions}>
@@ -248,37 +272,29 @@ export default function App() {
             </div>
           </div>
 
-          {/* Subject */}
-          <div style={s.field}>
-            <label style={s.label} htmlFor="subject">Subject</label>
-            <input
-              id="subject"
-              style={s.input}
-              placeholder="Email subject…"
-              value={subject}
-              onChange={e => setSubject(e.target.value)}
-              maxLength={200}
-            />
-          </div>
+          {/* Subject removed — no longer needed */}
 
           {/* Message */}
           <div style={{ ...s.field, flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <label style={s.label} htmlFor="message">Message</label>
-            <textarea
-              id="message"
-              style={s.textarea}
-              placeholder="Type your message here…"
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-            />
+            <label style={s.label}>Message</label>
+            <div style={s.editorWrap}>
+              <ReactQuill
+                theme="snow"
+                value={message}
+                onChange={setMessage}
+                modules={quillModules}
+                formats={quillFormats}
+                placeholder="Type your message here…"
+                readOnly={sending}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+              />
+            </div>
           </div>
 
           {/* Result */}
           {result && (
-            <div style={{ ...s.resultBox, ...(result.failed > 0 ? s.resultWarn : s.resultOk) }}>
-              ✅ Sent: <strong>{result.sent}</strong>
-              {result.failed > 0 && <> &nbsp;·&nbsp; ❌ Failed: <strong>{result.failed}</strong></>}
-              <span style={{ color: 'var(--text3)', marginLeft: 8 }}>({result.total} total)</span>
+            <div style={{ ...s.resultBox, ...s.resultOk }}>
+              📨 Queued for <strong>{result.total}</strong> user{result.total !== 1 ? 's' : ''} — emails are sending in the background.
             </div>
           )}
 
@@ -288,9 +304,7 @@ export default function App() {
             onClick={handleSend}
             disabled={sending}
           >
-            {sending
-              ? `Sending…`
-              : `Send to ${recipientLabel}`}
+            {sending ? 'Queuing…' : `Send to ${recipientLabel}`}
           </button>
         </main>
       </div>
@@ -298,7 +312,7 @@ export default function App() {
   );
 }
 
-// ── styles ────────────────────────────────────────────────────────────────────
+// ── styles ─────────────────────────────────────────────────────────────────────
 const s = {
   page:    { minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' },
   header:  { background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '0 24px',
@@ -311,20 +325,18 @@ const s = {
 
   layout:  { flex: 1, display: 'flex', overflow: 'hidden', height: 'calc(100vh - 60px)' },
 
-  sidebar:    { width: 320, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--border)',
-                display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  sidebarTop: { padding: '16px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  sidebar:      { width: 320, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  sidebarTop:   { padding: '16px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   sidebarTitle: { fontSize: 14, fontWeight: 700, color: 'var(--text)' },
   sidebarActions: { display: 'flex', gap: 8 },
   linkBtn: { background: 'none', border: 'none', color: 'var(--primary)', fontSize: 12,
              fontWeight: 600, cursor: 'pointer', padding: '2px 4px' },
 
-  modeRow: { display: 'flex', gap: 6, padding: '10px 16px 0' },
-  modeBtn: { flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid var(--border)',
-             background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 500,
-             cursor: 'pointer' },
-  modeBtnOn: { background: 'var(--primary-l)', borderColor: 'var(--primary)',
-               color: 'var(--primary)', fontWeight: 700 },
+  modeRow:  { display: 'flex', gap: 6, padding: '10px 16px 0' },
+  modeBtn:  { flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid var(--border)',
+              background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
+  modeBtnOn:{ background: 'var(--primary-l)', borderColor: 'var(--primary)', color: 'var(--primary)', fontWeight: 700 },
 
   searchWrap:  { margin: '10px 16px 0', position: 'relative', display: 'flex', alignItems: 'center' },
   searchIcon:  { position: 'absolute', left: 10, fontSize: 13, pointerEvents: 'none' },
@@ -338,7 +350,7 @@ const s = {
   empty:    { textAlign: 'center', color: 'var(--text3)', padding: '32px 0', fontSize: 13 },
 
   userRow:   { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
-               borderRadius: 8, cursor: 'pointer', marginBottom: 2, transition: 'background 0.1s' },
+               borderRadius: 8, cursor: 'pointer', marginBottom: 2 },
   userRowOn: { background: 'var(--primary-l)' },
 
   avatar:   { width: 36, height: 36, borderRadius: '50%', background: 'var(--bg3)',
@@ -357,8 +369,7 @@ const s = {
              fontSize: 11, color: '#fff', flexShrink: 0, fontWeight: 700 },
   checkOn: { background: 'var(--primary)', borderColor: 'var(--primary)' },
 
-  compose:      { flex: 1, padding: '28px 32px', display: 'flex', flexDirection: 'column',
-                  gap: 16, overflowY: 'auto' },
+  compose:      { flex: 1, padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' },
   composeTitle: { fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 4 },
 
   field:   { display: 'flex', flexDirection: 'column', gap: 6 },
@@ -374,12 +385,18 @@ const s = {
               background: 'var(--bg2)', fontSize: 14, color: 'var(--text)', outline: 'none',
               resize: 'vertical', minHeight: 240, lineHeight: 1.6, flex: 1 },
 
-  resultBox:  { padding: '12px 16px', borderRadius: 8, fontSize: 14, display: 'flex',
-                alignItems: 'center', gap: 4 },
-  resultOk:   { background: 'rgba(34,197,94,0.1)', color: 'var(--success)',
-                border: '1px solid rgba(34,197,94,0.25)' },
-  resultWarn: { background: 'rgba(245,158,11,0.1)', color: 'var(--warning)',
-                border: '1px solid rgba(245,158,11,0.25)' },
+  editorWrap: {
+    borderRadius: 8,
+    border: '1px solid var(--border)',
+    background: 'var(--bg2)',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 320,
+    overflow: 'hidden',
+  },
+
+  resultBox:  { padding: '12px 16px', borderRadius: 8, fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 },
+  resultOk:   { background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.25)' },
 
   sendBtn:    { padding: '14px 28px', borderRadius: 10, border: 'none', background: 'var(--primary)',
                 color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' },
