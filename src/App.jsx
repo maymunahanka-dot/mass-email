@@ -3,7 +3,9 @@ import toast, { Toaster } from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
-const API = import.meta.env.VITE_BACKEND_URL || 'https://backend.fashiontally.com';
+const API       = import.meta.env.VITE_BACKEND_URL       || 'https://backend.fashiontally.com';
+const EMAIL_API = import.meta.env.VITE_EMAIL_BACKEND_URL || 'http://localhost:5001';
+
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function initials(name, email) {
@@ -65,7 +67,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const res  = await fetch(`${API}/api/email-blast/users`);
+        const res  = await fetch(`${EMAIL_API}/api/users`);
         const data = await res.json();
         if (data.success) {
           setUsers(data.users);
@@ -127,11 +129,16 @@ export default function App() {
     setSending(true);
     setResult(null);
 
+    // Always send a flat array of emails to email_backend
+    const emailList = sendMode === 'all'
+      ? users.map(u => u.email)
+      : [...selected];
+
     try {
-      const res  = await fetch(`${API}/api/email-blast/send`, {
+      const res  = await fetch(`${EMAIL_API}/api/send`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ message: message.trim(), recipients }),
+        body:    JSON.stringify({ message: message.trim(), recipients: emailList }),
       });
 
       // Guard against non-JSON responses (e.g. 413 Payload Too Large)
