@@ -3,8 +3,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
-const API       = import.meta.env.VITE_BACKEND_URL       || 'https://backend.fashiontally.com';
-const EMAIL_API = import.meta.env.VITE_EMAIL_BACKEND_URL || 'http://localhost:5001';
+const API       = import.meta.env.VITE_EMAIL_BACKEND_URL || 'https://backend.fashiontally.com';
+const EMAIL_API = import.meta.env.VITE_EMAIL_BACKEND_URL || 'https://backend.fashiontally.com';
 
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const res  = await fetch(`${EMAIL_API}/api/users`);
+        const res  = await fetch(`${API}/api/email-blast/users`);
         const data = await res.json();
         if (data.success) {
           setUsers(data.users);
@@ -135,7 +135,7 @@ export default function App() {
       : [...selected];
 
     try {
-      const res  = await fetch(`${EMAIL_API}/api/send`, {
+      const res  = await fetch(`${EMAIL_API}/api/email-blast/send`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ message: message.trim(), recipients: emailList }),
@@ -321,7 +321,7 @@ export default function App() {
 
 // ── styles ─────────────────────────────────────────────────────────────────────
 const s = {
-  page:    { minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' },
+  page:    { height: '100vh', overflow: 'hidden', background: 'var(--bg)', display: 'flex', flexDirection: 'column' },
   header:  { background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '0 24px',
              height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
   logo:    { display: 'flex', alignItems: 'center', gap: 10 },
